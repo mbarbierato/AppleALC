@@ -108,6 +108,14 @@
 				<key>Path</key>
 				<string>layout99.xml.zlib</string>
 			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>Realtek ALC S1220A for Asus Z890 ProArt Creator WiFi (caley13)</string>
+				<key>Id</key>
+				<integer>89</integer>
+				<key>Path</key>
+				<string>layout89.xml.zlib</string>
+			</dict>
 		</array>
 		<key>Platforms</key>
 		<array>
@@ -206,6 +214,14 @@
 				<integer>99</integer>
 				<key>Path</key>
 				<string>Platforms99.xml.zlib</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>Realtek ALC S1220A for Asus Z890 ProArt Creator WiFi (caley13)</string>
+				<key>Id</key>
+				<integer>89</integer>
+				<key>Path</key>
+				<string>Platforms89.xml.zlib</string>
 			</dict>
 		</array>
 	</dict>

@@ -94,6 +94,14 @@
 			</dict>
 			<dict>
 				<key>Comment</key>
+				<string>ALC235 for Lenovo ThinkCentre M920x-N000 by Xezun</string>
+				<key>Id</key>
+				<integer>20</integer>
+				<key>Path</key>
+				<string>layout20.xml.zlib</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
 				<string>ALC235 for Lenovo C530 Desktop PC by Andres ZeroCross</string>
 				<key>Id</key>
 				<integer>21</integer>
@@ -155,6 +163,14 @@
 				<integer>37</integer>
 				<key>Path</key>
 				<string>layout37.xml.zlib</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>Lenovo Yoga 500-14IBD ALC235 by gabimariz</string>
+				<key>Id</key>
+				<integer>55</integer>
+				<key>Path</key>
+				<string>layout55.xml.zlib</string>
 			</dict>
 			<dict>
 				<key>Comment</key>
@@ -273,6 +289,14 @@
 			</dict>
 			<dict>
 				<key>Comment</key>
+				<string>ALC235 for Lenovo ThinkCentre M920x-N000 by Xezun</string>
+				<key>Id</key>
+				<integer>20</integer>
+				<key>Path</key>
+				<string>Platforms20.xml.zlib</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
 				<string>ALC235 for Lenovo C530 Desktop PC by Andres ZeroCross</string>
 				<key>Id</key>
 				<integer>21</integer>
@@ -334,6 +358,14 @@
 				<integer>37</integer>
 				<key>Path</key>
 				<string>Platforms37.xml.zlib</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>Lenovo Yoga 500-14IBD ALC235</string>
+				<key>Id</key>
+				<integer>55</integer>
+				<key>Path</key>
+				<string>Platforms55.xml.zlib</string>
 			</dict>
 			<dict>
 				<key>Comment</key>
