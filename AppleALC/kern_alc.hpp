@@ -282,6 +282,23 @@ private:
 	 *  AppleHDAPlatformDriver::start original method
 	 */
 	mach_vm_address_t orgAppleHDAPlatformDriver_start {0};
+
+	/**
+	 *  Hooked IOHDACodecDevice::start — Tahoe fallback when AppleHDA.kext is absent.
+	 *  IOHDAFamily is still present in Tahoe; we use its codec device start to inject
+	 *  layout and platform resources that AppleHDADriver would normally handle.
+	 */
+	static bool IOHDACodecDevice_start(IOService* service, IOService* provider);
+
+	/**
+	 *  IOHDACodecDevice::start original method
+	 */
+	mach_vm_address_t orgIOHDACodecDevice_start {0};
+
+	/**
+	 *  Guards against injecting resources more than once across multiple codec devices
+	 */
+	bool tahoeResourcesInjected {false};
 	
 	/**
 	 *	Replace layout resources in AppleHDAPlatformDriver (AppleHDA on 10.4)
@@ -410,7 +427,8 @@ private:
 			CallbacksWantRouting = 4,
 			PatchHDAFamily = 8,
 			PatchHDAController = 16,
-			PatchHDAPlatformDriver = 32
+			PatchHDAPlatformDriver = 32,
+			PatchIOHDACodecDevice = 64  // Tahoe: fallback when AppleHDA.kext is absent
 		};
 	};
 	int progressState {ProcessingState::NotReady};

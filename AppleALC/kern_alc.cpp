@@ -44,6 +44,11 @@ void AlcEnabler::init() {
 		ADDPR(kextList)[KextIdAppleGFXHDA].switchOff();
 	if (getKernelVersion() == KernelVersion::Tiger || getKernelVersion() >= KernelVersion::Lion)
 		ADDPR(kextList)[KextIdAppleHDAPlatformDriver].switchOff();
+	// Tahoe (macOS 26+) removed AppleHDA.kext entirely; disable the watch to avoid
+	// waiting forever for a kext that will never load. Resource injection is handled
+	// via the IOHDACodecDevice::start hook installed in PatchHDAFamily instead.
+	if (getKernelVersion() >= KernelVersion::Tahoe)
+		ADDPR(kextList)[KextIdAppleHDA].switchOff();
 #else
 	ADDPR(kextList)[KextIdAppleGFXHDA].switchOff();
 	ADDPR(kextList)[KextIdAppleHDA].switchOff();
@@ -579,6 +584,29 @@ void AlcEnabler::processKext(KernelPatcher &patcher, size_t index, mach_vm_addre
 		progressState |= ProcessingState::PatchHDAFamily;
 		KernelPatcher::RouteRequest request(symIOHDACodecDevice_executeVerb, IOHDACodecDevice_executeVerb, orgIOHDACodecDevice_executeVerb);
 		patcher.routeMultiple(index, &request, 1, address, size);
+
+#ifdef HAVE_ANALOG_AUDIO
+		// Tahoe removed AppleHDA.kext (starting with beta 2 / DP2).
+		// Hook IOHDACodecDevice::start from IOHDAFamily as a fallback injection point:
+		// it fires for every codec the HDA bus enumerates, giving us a service instance
+		// to call replaceAppleHDADriverResources() on — the same role AppleHDADriver::start
+		// played on earlier macOS versions.
+		if (getKernelVersion() >= KernelVersion::Tahoe) {
+			if (!(progressState & ProcessingState::PatchIOHDACodecDevice)) {
+				progressState |= ProcessingState::PatchIOHDACodecDevice;
+				KernelPatcher::RouteRequest reqStart(
+					"__ZN16IOHDACodecDevice5startEP9IOService",
+					IOHDACodecDevice_start, orgIOHDACodecDevice_start);
+				patcher.routeMultiple(index, &reqStart, 1, address, size);
+				if (patcher.getError() != KernelPatcher::Error::NoError) {
+					SYSLOG("alc", "failed to hook IOHDACodecDevice::start for Tahoe — audio may not work");
+					patcher.clearError();
+				} else {
+					DBGLOG("alc", "hooked IOHDACodecDevice::start for Tahoe resource injection");
+				}
+			}
+		}
+#endif
 	}
 	
 	if (!(progressState & ProcessingState::PatchHDAController) && kextIndex == KextIdAppleHDAController) {
@@ -1033,6 +1061,54 @@ bool AlcEnabler::AppleHDAPlatformDriver_start(IOService* service, IOService* pro
 	
 	return FunctionCast(AppleHDAPlatformDriver_start, callbackAlc->orgAppleHDAPlatformDriver_start)(service, provider);
 }
+
+#ifdef HAVE_ANALOG_AUDIO
+bool AlcEnabler::IOHDACodecDevice_start(IOService *service, IOService *provider) {
+	// Call the original first so the device is fully initialised and its IORegistry
+	// properties (IOHDACodecVendorID, IOHDACodecRevisionID, …) are published before
+	// we try to read them.
+	bool ret = FunctionCast(IOHDACodecDevice_start,
+		callbackAlc->orgIOHDACodecDevice_start)(service, provider);
+
+	if (!ret) {
+		DBGLOG("alc", "IOHDACodecDevice_start: original returned false, skipping injection");
+		return ret;
+	}
+
+	// Only inject once: multiple codec devices may enumerate (e.g. HDMI + analog),
+	// but layout/platform resources belong to the controller, not per-codec.
+	if (callbackAlc->tahoeResourcesInjected) {
+		DBGLOG("alc", "IOHDACodecDevice_start: resources already injected, skipping");
+		return ret;
+	}
+
+	// Ensure controllers have been discovered (grabControllers runs before us, but
+	// grabCodecs needs the IOHDACodecDevice nodes to be visible in IORegistry).
+	if (!(callbackAlc->progressState & ProcessingState::CodecsLoaded)) {
+		if (callbackAlc->grabCodecs()) {
+			callbackAlc->progressState |= ProcessingState::CodecsLoaded;
+		} else {
+			DBGLOG("alc", "IOHDACodecDevice_start: no suitable codec found, skipping injection");
+			return ret;
+		}
+	}
+
+	// Apply any binary patches declared for the matched codecs.
+	// Note: patches targeting AppleHDA symbols are meaningless here since AppleHDA
+	// is absent in Tahoe, but codec-specific controller patches still apply and are
+	// handled by the AppleHDAController hook already installed separately.
+
+	// Inject Layouts and PathMaps into the IOHDACodecDevice service node.
+	// In Tahoe, IOHDAFamily consumes these properties directly from the codec node
+	// in place of the AppleHDADriver mechanism used on earlier macOS versions.
+	callbackAlc->replaceAppleHDADriverResources(service);
+	callbackAlc->tahoeResourcesInjected = true;
+	DBGLOG("alc", "IOHDACodecDevice_start: Tahoe resource injection complete for %s",
+		service->getName() ? service->getName() : "unknown");
+
+	return ret;
+}
+#endif
 
 void AlcEnabler::replaceAppleHDADriverResources(IOService *service) {
 	DBGLOG("alc", "replacing AppleHDA legacy resources");
