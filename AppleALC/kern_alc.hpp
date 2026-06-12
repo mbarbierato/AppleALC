@@ -284,9 +284,11 @@ private:
 	mach_vm_address_t orgAppleHDAPlatformDriver_start {0};
 
 	/**
-	 *  Hooked IOHDACodecDevice::start — Tahoe fallback when AppleHDA.kext is absent.
-	 *  IOHDAFamily is still present in Tahoe; we use its codec device start to inject
-	 *  layout and platform resources that AppleHDADriver would normally handle.
+	 *  Hooked IOHDACodecFunction::start — Tahoe fallback when AppleHDA.kext is absent.
+	 *  IOHDAFamily is still present in Tahoe; we hook the IOHDACodecFunction node
+	 *  (last to become active in the HDA tree) to inject layout and platform resources
+	 *  that AppleHDADriver would normally handle. The function is named
+	 *  IOHDACodecDevice_start for historical continuity but targets IOHDACodecFunction.
 	 */
 	static bool IOHDACodecDevice_start(IOService* service, IOService* provider);
 
